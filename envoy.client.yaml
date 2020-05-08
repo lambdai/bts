@@ -46,18 +46,25 @@ static_resources:
     connect_timeout: 1s
     type: strict_dns
     lb_policy: round_robin
-    hosts:
-    - socket_address:
-        address: 127.0.0.1
-        port_value: 15009
-  - name: test_server_cluster
-    connect_timeout: 1s
-    type: strict_dns
-    lb_policy: round_robin
-    hosts:
-    - socket_address:
-        address: 127.0.0.1
-        port_value: 15008
+    load_assignment:
+      cluster_name: "mixed_cluster"
+      endpoints:
+        lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 15009
+          metadata:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 10001
+          metadata:
+            filter_metadata:
+              envoy.plaintcponly:
+    dns_refresh_rate: 60s
 admin:
   access_log_path: "/dev/null"
   address:
