@@ -15,12 +15,12 @@ static_resources:
           "@type": type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy
           stat_prefix: pingping
           cluster: ping_cluster
-    listenerFiltersTimeout: 0.100s
-    continueOnListenerFiltersTimeout: true
+    listenerFiltersTimeout: 30s
   - address:
       socket_address:
         address: 0.0.0.0
         port_value: 7071
+    continue_on_listener_filters_timeout: true
     listener_filters:
       - name: "envoy.listener.tls_inspector"
         typed_config: {}
