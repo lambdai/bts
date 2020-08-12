@@ -66,9 +66,8 @@ static_resources:
           - name: envoy.file_access_log
             config:
               path: "/dev/stdout"
-              #          upgrade_configs: 
-              #            upgrade_type: "CONNECT"
-          #            connect_config: 
+          upgrade_configs: 
+            upgrade_type: websocket
           route_config:
             name: local_route
             virtual_hosts:
