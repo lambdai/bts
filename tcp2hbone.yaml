@@ -23,7 +23,24 @@ static_resources:
   - address:
       socket_address:
         address: 0.0.0.0
-        port_value: 9997  # for test
+        port_value: 4000  # for test
+    filter_chains:
+    - filters:
+      - name: envoy.tcp_proxy
+        typed_config: 
+          "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+          stat_prefix: client
+          cluster: mixed_cluster
+          tunneling_config: 
+            hostname: demo.com
+            headers_to_add:
+            - header:
+                key: target
+                value: httptocluster 
+  - address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 4001  # for test
 #    listener_filters:
 #      - name: "envoy.listener.tls_inspector"
     filter_chains:
@@ -35,6 +52,49 @@ static_resources:
           cluster: mixed_cluster
           tunneling_config: 
             hostname: demo.com
+            headers_to_add:
+            - header:
+                key: target
+                value: internaltcpproxystack
+  - address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 4002  # for test
+    filter_chains:
+    - filters:
+      - name: envoy.tcp_proxy
+        typed_config: 
+          "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+          stat_prefix: client
+          cluster: mixed_cluster
+          tunneling_config: 
+            hostname: demo.com
+            headers_to_add:
+            - header:
+                key: target
+                value: ostcpproxystack
+  - address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 5000  # for test
+    filter_chains:
+    - filters:
+      - name: envoy.tcp_proxy
+        typed_config: 
+          "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+          stat_prefix: client
+          cluster: remote_service_cluster
+  - address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 5001  # for test
+    filter_chains:
+    - filters:
+      - name: envoy.tcp_proxy
+        typed_config: 
+          "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+          stat_prefix: client
+          cluster: remote_tcp_proxy_cluster
 #      tls_context:
 #        common_tls_context:
 #          tls_certificates:
@@ -54,7 +114,7 @@ static_resources:
           stat_prefix: client
           cluster: notexist
   clusters:
-  - name: server_cluster
+  - name: mixed_cluster
     connect_timeout: 1s
     type: strict_dns
     lb_policy: round_robin
@@ -78,6 +138,44 @@ static_resources:
                   #            filter_metadata:
                   #              envoy.plaintcponly:
     dns_refresh_rate: 60s
+  - name: remote_service_cluster
+    connect_timeout: 1s
+    type: strict_dns
+    lb_policy: round_robin
+    http2_protocol_options: {}
+    load_assignment:
+      cluster_name: remote_service_cluster
+      endpoints:
+        lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 192.168.1.11
+                port_value: 4096
+          metadata:
+                  #        - endpoint:
+                  #            address:
+                  #              socket_address:
+                  #                address: 127.0.0.1
+                  #                port_value: 10001
+                  #          metadata:
+                  #            filter_metadata:
+                  #              envoy.plaintcponly:
+    dns_refresh_rate: 60s
+  - name: remote_tcp_proxy_cluster
+    connect_timeout: 1s
+    type: strict_dns
+    lb_policy: round_robin
+    http2_protocol_options: {}
+    load_assignment:
+      cluster_name: remote_tcp_proxy_clsuter
+      endpoints:
+        lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 192.168.1.11
+                port_value: 7000
   - name: notexist
     connect_timeout: 1s
     type: strict_dns

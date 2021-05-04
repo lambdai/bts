@@ -1,5 +1,33 @@
 static_resources:
   listeners:
+  - name: listener_internal_tcp_proxy
+    address:
+      envoy_internal_address:
+        server_listener_name: internal_listener_foo
+    internal_listener: {}
+    filter_chains:
+    - filters:
+      - name: envoy.tcp_proxy
+        typed_config: 
+          "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+          stat_prefix: internal_tcp_proxy
+          cluster: target_cluster
+    listenerFiltersTimeout: 0.100s
+    continueOnListenerFiltersTimeout: true
+  - name: listener_os_tcp_proxy
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 7000
+    filter_chains:
+    - filters:
+      - name: envoy.tcp_proxy
+        typed_config: 
+          "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+          stat_prefix: os_tcp_proxy
+          cluster: target_cluster
+    listenerFiltersTimeout: 0.100s
+    continueOnListenerFiltersTimeout: true
   - address:
       socket_address:
         address: 0.0.0.0
@@ -27,10 +55,34 @@ static_resources:
               - "*"
               routes:
               - match:
-                      #connect_matcher:
                   prefix: "/"
+                  headers:
+                  - name: target
+                    exact_match: "/httptocluster"
                 route:
-                  cluster: "echo_cluster"
+                  cluster: "target_cluster"
+                  upgrade_configs:
+                    upgrade_type: "CONNECT"
+                    connect_config: 
+                    enabled: true
+              - match:
+                  prefix: "/"
+                  headers:
+                  - name: target
+                    exact_match: "/internaltcpproxystack"
+                route:
+                  cluster: "internal_tcp_proxy_cluster"
+                  upgrade_configs:
+                    upgrade_type: "CONNECT"
+                    connect_config: 
+                    enabled: true
+              - match:
+                  prefix: "/"
+                  headers:
+                  - name: target
+                    exact_match: "/ostcpproxystack"
+                route:
+                  cluster: "os_tcp_proxy_cluster"
                   upgrade_configs:
                     upgrade_type: "CONNECT"
                     connect_config: 
@@ -125,22 +177,7 @@ static_resources:
             address:
               socket_address:
                 address: 127.0.0.1
-                port_value: 80
-                protocol: TCP
-    dns_refresh_rate: 60s
-  - name: ping_cluster
-    connect_timeout: 1s
-    type: strict_dns
-    lb_policy: round_robin
-    load_assignment:
-      cluster_name: statsd
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: 127.0.0.1
-                port_value: 90
+                port_value: 91
                 protocol: TCP
     dns_refresh_rate: 60s
   - name: echo_cluster
@@ -155,8 +192,50 @@ static_resources:
             address:
               socket_address:
                 address: 127.0.0.1
-                port_value: 9999
+                port_value: 90
                 protocol: TCP
+    dns_refresh_rate: 60s
+  - name: target_cluster
+    connect_timeout: 1s
+    type: strict_dns
+    lb_policy: round_robin
+    load_assignment:
+      cluster_name: statsd
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 4096
+                protocol: TCP
+    dns_refresh_rate: 60s
+  - name: os_tcp_proxy_cluster
+    connect_timeout: 1s
+    type: strict_dns
+    lb_policy: round_robin
+    load_assignment:
+      cluster_name: statsd
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 7000
+                protocol: TCP
+  - name: internal_tcp_proxy_cluster
+    connect_timeout: 1s
+    type: strict_dns
+    lb_policy: round_robin
+    load_assignment:
+      cluster_name: statsd
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              envoy_internal_address:
+                server_listener_name: internal_listener_foo
     dns_refresh_rate: 60s
 admin:
   access_log_path: "/dev/null"
